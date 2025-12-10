@@ -1,110 +1,115 @@
-// phrasal_verbs.js
-// Versión compatible con AnkiMine (máxima compatibilidad ES5)
+/* global api */
+/*
+  enes_PhrasalVerbs.js
+  Diccionario para AnkiMine que devuelve phrasal verbs desde una base de datos local.
+  - Clase: enes_PhrasalVerbs  (en = English source, es = Spanish target — prefijo recomendado)
+  - Métodos: displayName(), setOptions(options), findTerm(word)
+  - findTerm devuelve una Promise que resuelve a:
+      - una string HTML con el resultado (preferible), o
+      - un array vacío si no hay resultado
+  Uso: subir a GitHub y pegar la URL raw en AnkiMine (Opc. Diccionarios -> Diccionario del usuario).
+*/
 
-// Lista de phrasal verbs (verb, meaning, example, level, separable)
-var phrasalVerbs = [
-  { verb: "ask out", meaning: "invite someone on a date", example: "He asked her out to dinner.", level: "B1", separable: true },
-  { verb: "bring up", meaning: "mention or introduce a topic; raise a child", example: "She brought up an interesting point in the meeting.", level: "B2", separable: false },
-  { verb: "call off", meaning: "cancel (an event)", example: "They called off the match because of rain.", level: "B1", separable: true },
-  { verb: "carry on", meaning: "continue", example: "Please carry on with your work.", level: "A2", separable: false },
-  { verb: "come across", meaning: "find by chance; seem (impression)", example: "I came across an old photo. / He came across as shy.", level: "B1", separable: false },
-  { verb: "come up with", meaning: "think of (an idea)", example: "She came up with a great solution.", level: "B2", separable: true },
-  { verb: "cut down (on)", meaning: "reduce (consumption)", example: "I'm trying to cut down on sugar.", level: "B1", separable: false },
-  { verb: "cut off", meaning: "stop the supply; interrupt", example: "The electricity was cut off.", level: "B2", separable: true },
-  { verb: "drop by", meaning: "visit informally", example: "I might drop by your office later.", level: "A2", separable: false },
-  { verb: "drop out (of)", meaning: "leave school or an activity before finishing", example: "He dropped out of university.", level: "B2", separable: false },
-  { verb: "eat out", meaning: "eat at a restaurant", example: "Let's eat out tonight.", level: "A1", separable: false },
-  { verb: "figure out", meaning: "understand; solve", example: "I can't figure out this problem.", level: "B1", separable: true },
-  { verb: "fill in", meaning: "complete (a form); substitute for someone", example: "Please fill in this form. / Can you fill in for me tomorrow?", level: "A2", separable: true },
-  { verb: "find out", meaning: "discover", example: "I found out the answer online.", level: "A2", separable: true },
-  { verb: "get along (with)", meaning: "have a good relationship", example: "She gets along with her colleagues.", level: "A2", separable: false },
-  { verb: "get away (with)", meaning: "escape punishment; do something without being noticed", example: "He got away with cheating.", level: "B2", separable: false },
-  { verb: "get over", meaning: "recover from (an illness or shock)", example: "It took her months to get over the illness.", level: "B1", separable: false },
-  { verb: "give up", meaning: "stop doing something (habit); surrender", example: "I gave up smoking last year.", level: "A2", separable: false },
-  { verb: "go on", meaning: "continue; happen", example: "Go on — I'm listening. / What's going on?", level: "A2", separable: false },
-  { verb: "go over", meaning: "review; examine", example: "Let's go over the plan together.", level: "B1", separable: false },
-  { verb: "grow up", meaning: "become an adult; be raised", example: "He grew up in Mexico.", level: "A1", separable: false },
-  { verb: "hang out", meaning: "spend time relaxing", example: "Do you want to hang out this weekend?", level: "A2", separable: false },
-  { verb: "hold on", meaning: "wait; keep hold of", example: "Hold on a second, please.", level: "A2", separable: false },
-  { verb: "keep on", meaning: "continue", example: "Keep on practicing and you'll improve.", level: "B1", separable: false },
-  { verb: "look after", meaning: "take care of", example: "Can you look after my cat?", level: "A1", separable: false },
-  { verb: "look forward to", meaning: "be excited about a future event", example: "I'm looking forward to the holidays.", level: "A2", separable: false },
-  { verb: "look up", meaning: "search for information; improve (situation)", example: "Look up the word in the dictionary. / Things are looking up.", level: "A2", separable: true },
-  { verb: "make up", meaning: "invent (a story); reconcile", example: "She made up an excuse. / They made up after the fight.", level: "B1", separable: true },
-  { verb: "pass away", meaning: "die (polite)", example: "Her grandfather passed away last year.", level: "B2", separable: false },
-  { verb: "pick up", meaning: "collect; learn informally; give a ride", example: "I'll pick you up at 7. / He picked up Spanish quickly.", level: "A2", separable: true },
-  { verb: "put off", meaning: "postpone", example: "They put off the meeting until next week.", level: "B1", separable: true },
-  { verb: "put on", meaning: "wear; organize (an event)", example: "She put on a coat. / The school put on a play.", level: "A2", separable: true },
-  { verb: "put up with", meaning: "tolerate", example: "I won't put up with rude behaviour.", level: "B2", separable: false },
-  { verb: "run out (of)", meaning: "have no more left", example: "We've run out of milk.", level: "A2", separable: false },
-  { verb: "set up", meaning: "establish; arrange", example: "They set up a new company.", level: "B1", separable: true },
-  { verb: "show up", meaning: "arrive; appear", example: "He showed up late to the party.", level: "A2", separable: false },
-  { verb: "shut down", meaning: "close (a business or machine)", example: "The factory was shut down.", level: "B2", separable: true },
-  { verb: "slow down", meaning: "reduce speed or rate", example: "You need to slow down when driving in rain.", level: "A2", separable: false },
-  { verb: "sort out", meaning: "organize; solve a problem", example: "We'll sort out the issue tomorrow.", level: "B1", separable: true },
-  { verb: "stand out", meaning: "be noticeable", example: "Her red coat made her stand out in the crowd.", level: "B1", separable: false },
-  { verb: "take after", meaning: "resemble (family)", example: "She takes after her mother.", level: "A2", separable: false },
-  { verb: "take off", meaning: "remove (clothing); depart (plane); become successful", example: "The plane took off on time. / That idea really took off.", level: "B1", separable: true },
-  { verb: "take on", meaning: "accept (work/responsibility); compete against", example: "He took on extra duties.", level: "B2", separable: true },
-  { verb: "take up", meaning: "start a hobby; occupy space/time", example: "She took up painting.", level: "B1", separable: true },
-  { verb: "tear up", meaning: "rip into pieces; become emotional", example: "He tore up the letter. / She was torn up after the news.", level: "B2", separable: true },
-  { verb: "throw away", meaning: "dispose of", example: "Don't throw away those papers — we need them.", level: "A2", separable: true },
-  { verb: "turn down", meaning: "reject; reduce volume", example: "She turned down the job offer.", level: "B1", separable: true },
-  { verb: "turn up", meaning: "increase volume; appear unexpectedly", example: "Turn up the music! / He turned up late.", level: "A2", separable: true },
-  { verb: "use up", meaning: "consume completely", example: "We've used up all the paper.", level: "A2", separable: true },
-  { verb: "warm up", meaning: "prepare for physical activity; get warmer", example: "Warm up before you exercise.", level: "A2", separable: false },
-  { verb: "work out", meaning: "exercise; solve a problem; calculate", example: "I work out at the gym. / We worked out the answer.", level: "A2", separable: true },
-  { verb: "write down", meaning: "record on paper", example: "Write down the address.", level: "A1", separable: true }
-];
+class enes_PhrasalVerbs {
+  constructor(options) {
+    this.options = options || {};
+    this.maxResults = this.options.maxResults || 20;
+    this.word = '';
+    // Base de datos local (puedes ampliar/modificar)
+    this.db = [
+      { verb: "ask out", meaning: "invitar a alguien a una cita", example: "He asked her out to dinner.", level: "B1" },
+      { verb: "bring up", meaning: "mencionar o sacar un tema; criar a un hijo", example: "She brought up an interesting point in the meeting.", level: "B2" },
+      { verb: "call off", meaning: "cancelar (un evento)", example: "They called off the match because of rain.", level: "B1" },
+      { verb: "carry on", meaning: "continuar", example: "Please carry on with your work.", level: "A2" },
+      { verb: "come across", meaning: "encontrar por casualidad; parecer (impresión)", example: "I came across an old photo. / He came across as shy.", level: "B1" },
+      { verb: "come up with", meaning: "idear (una solución)", example: "She came up with a great solution.", level: "B2" },
+      { verb: "get over", meaning: "superar (una enfermedad o choque)", example: "It took her months to get over the illness.", level: "B1" },
+      { verb: "give up", meaning: "dejar de hacer algo (hábito); rendirse", example: "I gave up smoking last year.", level: "A2" },
+      { verb: "look after", meaning: "cuidar", example: "Can you look after my cat?", level: "A1" },
+      { verb: "look up", meaning: "buscar información / mejorar", example: "Look up the word in the dictionary. / Things are looking up.", level: "A2" },
+      { verb: "pick up", meaning: "recoger; aprender de forma informal; dar un aventón", example: "I'll pick you up at 7. / He picked up Spanish quickly.", level: "A2" },
+      { verb: "put off", meaning: "posponer", example: "They put off the meeting until next week.", level: "B1" },
+      { verb: "put up with", meaning: "tolerar", example: "I won't put up with rude behaviour.", level: "B2" },
+      { verb: "set up", meaning: "establecer; organizar", example: "They set up a new company.", level: "B1" },
+      { verb: "turn down", meaning: "rechazar; bajar el volumen", example: "She turned down the job offer.", level: "B1" },
+      { verb: "work out", meaning: "hacer ejercicio; resolver un problema", example: "I work out at the gym. / We worked out the answer.", level: "A2" },
+      { verb: "write down", meaning: "anotar", example: "Write down the address.", level: "A1" }
+      // añade aquí las demás entradas de tu base original si lo deseas
+    ];
+  }
 
-// Funciones auxiliares
-function normalize(s) {
-  if (!s) return "";
-  try { return String(s).toLowerCase().trim(); }
-  catch (e) { return ""; }
-}
+  // Nombre que aparecerá en la UI de AnkiMine (puede ser async como en el ejemplo)
+  async displayName() {
+    try {
+      var locale = await api.locale();
+      // ejemplo de personalización por locale (opcional)
+      if (locale && locale.indexOf && locale.indexOf('ES') !== -1) return 'Phrasal Verbs (inglés → español)';
+      return 'Phrasal Verbs (EN→ES)';
+    } catch (e) {
+      return 'Phrasal Verbs (EN→ES)';
+    }
+  }
 
-// Objeto requerido por AnkiMine
-var AnkiMineUserDictionary = {
-  name: "Phrasal Verbs (Personalizado)",
+  // Permite cambiar opciones desde la UI de AnkiMine si lo soporta
+  setOptions(options) {
+    this.options = options || {};
+    if (this.options.maxResults) this.maxResults = this.options.maxResults;
+  }
 
-  lookup: function (word) {
-    if (!word) return null;
-    var q = normalize(word);
+  // Método obligatorio: recibe la palabra y debe devolver Promise que resuelva a HTML string o array
+  async findTerm(word) {
+    this.word = (word || '').toString().trim();
+    if (!this.word) return []; // array vacío = sin resultados
+
+    var q = this.word.toLowerCase();
+
+    // buscar coincidencias: verbo exacto, que empiece o que contenga
     var matches = [];
-    for (var i = 0; i < phrasalVerbs.length; i++) {
-      var entry = phrasalVerbs[i];
-      var v = normalize(entry.verb);
-      // coincidencia exacta o que contenga la query
+    for (var i = 0; i < this.db.length; i++) {
+      var v = (this.db[i].verb || '').toLowerCase();
       if (v === q || v.indexOf(q) === 0 || v.indexOf(q) > -1) {
-        matches.push(entry);
-        if (matches.length >= 40) break;
+        matches.push(this.db[i]);
+        if (matches.length >= this.maxResults) break;
       }
     }
-    if (matches.length === 0) return null;
 
-    var results = [];
+    if (matches.length === 0) return []; // sin resultados
+
+    // Construir HTML de salida — AnkiMine mostrará el HTML en el popup
+    var html = '<div class="user-dict-results"><h3>Phrasal verbs: ' + this._escapeHtml(this.word) + '</h3>';
+    html += '<ul style="margin-left:0; padding-left:1em;">';
     for (var j = 0; j < matches.length; j++) {
       var e = matches[j];
-      var def = (e.meaning ? e.meaning : "");
-      if (e.example) def += " — Example: " + e.example;
-      if (e.level) def += " (Level: " + e.level + ")";
-      results.push({
-        head: e.verb,
-        def: def,
-        pos: "phrasal verb"
-      });
+      html += '<li style="margin-bottom:0.6em;">';
+      html += '<strong>' + this._escapeHtml(e.verb) + '</strong>';
+      if (e.level) html += ' <small style="color:#666">[' + this._escapeHtml(e.level) + ']</small>';
+      html += '<div style="margin-top:0.2em;">' + this._escapeHtml(e.meaning) + '</div>';
+      if (e.example) html += '<div style="font-style:italic; color:#333; margin-top:0.2em;">Ej: ' + this._escapeHtml(e.example) + '</div>';
+      html += '</li>';
     }
-    return results;
-  },
+    html += '</ul></div>';
 
-  // opcional: útil para debugging
-  listAll: function () {
-    return phrasalVerbs.slice(0);
+    return html; // AnkiMine acepta string HTML o array
   }
-};
 
-// exportación condicional (no rompe en navegadores)
-if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
-  module.exports = { phrasalVerbs: phrasalVerbs, AnkiMineUserDictionary: AnkiMineUserDictionary };
+  // util: escapar HTML simple para seguridad
+  _escapeHtml(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // opcional: método para debugging (devuelve la DB)
+  listAll() {
+    return this.db.slice(0);
+  }
+}
+
+/* export condicional para test (no rompe en navegadores) */
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  module.exports = enes_PhrasalVerbs;
 }
