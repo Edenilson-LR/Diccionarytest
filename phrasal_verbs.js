@@ -1,10 +1,8 @@
 // phrasal_verbs.js
-// Diccionario de phrasal verbs compatible con AnkiMine (cargable desde GitHub - raw URL).
-// Instrucciones: sube este archivo a un repositorio público y usa la URL "Raw" (raw.githubusercontent.com/.../phrasal_verbs.js)
-// en AnkiMine (Opc. de diccionarios -> Diccionario del usuario -> Script).
+// Versión compatible con AnkiMine (máxima compatibilidad ES5)
 
 // Lista de phrasal verbs (verb, meaning, example, level, separable)
-const phrasalVerbs = [
+var phrasalVerbs = [
   { verb: "ask out", meaning: "invite someone on a date", example: "He asked her out to dinner.", level: "B1", separable: true },
   { verb: "bring up", meaning: "mention or introduce a topic; raise a child", example: "She brought up an interesting point in the meeting.", level: "B2", separable: false },
   { verb: "call off", meaning: "cancel (an event)", example: "They called off the match because of rain.", level: "B1", separable: true },
@@ -61,49 +59,52 @@ const phrasalVerbs = [
 
 // Funciones auxiliares
 function normalize(s) {
-  return (s || "").toString().trim().toLowerCase();
+  if (!s) return "";
+  try { return String(s).toLowerCase().trim(); }
+  catch (e) { return ""; }
 }
 
-// Interfaz mínima esperada por AnkiMine: exponer AnkiMineUserDictionary.lookup(word)
-// Devuelve null si no encuentra nada, o un array de objetos { head, def, pos }
-var AnkiMineUserDictionary = (function () {
-  return {
-    lookup: function (word) {
-      if (!word) return null;
-      const q = normalize(word);
-      // buscar coincidencias exactas o que comiencen con la query
-      const matches = phrasalVerbs.filter(e => {
-        const v = normalize(e.verb);
-        return v === q || v.indexOf(q) === 0 || v.includes(q);
-      }).slice(0, 40); // límite razonable
+// Objeto requerido por AnkiMine
+var AnkiMineUserDictionary = {
+  name: "Phrasal Verbs (Personalizado)",
 
-      if (matches.length === 0) return null;
+  lookup: function (word) {
+    if (!word) return null;
+    var q = normalize(word);
+    var matches = [];
+    for (var i = 0; i < phrasalVerbs.length; i++) {
+      var entry = phrasalVerbs[i];
+      var v = normalize(entry.verb);
+      // coincidencia exacta o que contenga la query
+      if (v === q || v.indexOf(q) === 0 || v.indexOf(q) > -1) {
+        matches.push(entry);
+        if (matches.length >= 40) break;
+      }
+    }
+    if (matches.length === 0) return null;
 
-      return matches.map(e => ({
+    var results = [];
+    for (var j = 0; j < matches.length; j++) {
+      var e = matches[j];
+      var def = (e.meaning ? e.meaning : "");
+      if (e.example) def += " — Example: " + e.example;
+      if (e.level) def += " (Level: " + e.level + ")";
+      results.push({
         head: e.verb,
-        def: e.meaning + (e.example ? " — Example: " + e.example : "") + (e.level ? " (Level: " + e.level + ")" : ""),
+        def: def,
         pos: "phrasal verb"
-      }));
-    },
-    // opcional: listar todas las entradas (útil para debug)
-    listAll: function () { return phrasalVerbs; }
-  };
-})();
+      });
+    }
+    return results;
+  },
 
-// Si el entorno soporta export (p. ej. Node/GitHub preview), exportar para facilitar testing
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  module.exports = { phrasalVerbs, AnkiMineUserDictionary };
+  // opcional: útil para debugging
+  listAll: function () {
+    return phrasalVerbs.slice(0);
+  }
+};
+
+// exportación condicional (no rompe en navegadores)
+if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
+  module.exports = { phrasalVerbs: phrasalVerbs, AnkiMineUserDictionary: AnkiMineUserDictionary };
 }
-
-/*
-  --- INSTALACIÓN EN GITHUB ---
-  1) Crea un repositorio público en GitHub.
-  2) Añade este archivo como `phrasal_verbs.js` en la raíz del repo (o carpeta /scripts/).
-  3) Pulsa en el archivo en GitHub y selecciona "Raw". Copia esa URL.
-     Ejemplo: https://raw.githubusercontent.com/tuUsuario/tuRepo/main/phrasal_verbs.js
-  4) En AnkiMine: Opc. de diccionarios -> Diccionario del usuario -> pega la URL en "Script".
-  5) Cargar Scripts -> marca la casilla On/Off -> Guardar+Cerrar.
-
-  Si quieres, puedo proporcionarte un `README.md` listo para poner en el repo y el contenido exacto
-  para que pegues directamente. También puedo convertir el archivo a JSON/CSV si lo prefieres.
-*/
