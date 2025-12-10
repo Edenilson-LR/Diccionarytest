@@ -1,7 +1,9 @@
 // phrasal_verbs.js
-// Lista de phrasal verbs orientada a estudiantes de inglés.
-// Cada entrada contiene: verb, meaning, example, level (A1-C2), separable: true/false/"both".
+// Diccionario de phrasal verbs compatible con AnkiMine (cargable desde GitHub - raw URL).
+// Instrucciones: sube este archivo a un repositorio público y usa la URL "Raw" (raw.githubusercontent.com/.../phrasal_verbs.js)
+// en AnkiMine (Opc. de diccionarios -> Diccionario del usuario -> Script).
 
+// Lista de phrasal verbs (verb, meaning, example, level, separable)
 const phrasalVerbs = [
   { verb: "ask out", meaning: "invite someone on a date", example: "He asked her out to dinner.", level: "B1", separable: true },
   { verb: "bring up", meaning: "mention or introduce a topic; raise a child", example: "She brought up an interesting point in the meeting.", level: "B2", separable: false },
@@ -57,4 +59,51 @@ const phrasalVerbs = [
   { verb: "write down", meaning: "record on paper", example: "Write down the address.", level: "A1", separable: true }
 ];
 
-export default phrasalVerbs;
+// Funciones auxiliares
+function normalize(s) {
+  return (s || "").toString().trim().toLowerCase();
+}
+
+// Interfaz mínima esperada por AnkiMine: exponer AnkiMineUserDictionary.lookup(word)
+// Devuelve null si no encuentra nada, o un array de objetos { head, def, pos }
+var AnkiMineUserDictionary = (function () {
+  return {
+    lookup: function (word) {
+      if (!word) return null;
+      const q = normalize(word);
+      // buscar coincidencias exactas o que comiencen con la query
+      const matches = phrasalVerbs.filter(e => {
+        const v = normalize(e.verb);
+        return v === q || v.indexOf(q) === 0 || v.includes(q);
+      }).slice(0, 40); // límite razonable
+
+      if (matches.length === 0) return null;
+
+      return matches.map(e => ({
+        head: e.verb,
+        def: e.meaning + (e.example ? " — Example: " + e.example : "") + (e.level ? " (Level: " + e.level + ")" : ""),
+        pos: "phrasal verb"
+      }));
+    },
+    // opcional: listar todas las entradas (útil para debug)
+    listAll: function () { return phrasalVerbs; }
+  };
+})();
+
+// Si el entorno soporta export (p. ej. Node/GitHub preview), exportar para facilitar testing
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  module.exports = { phrasalVerbs, AnkiMineUserDictionary };
+}
+
+/*
+  --- INSTALACIÓN EN GITHUB ---
+  1) Crea un repositorio público en GitHub.
+  2) Añade este archivo como `phrasal_verbs.js` en la raíz del repo (o carpeta /scripts/).
+  3) Pulsa en el archivo en GitHub y selecciona "Raw". Copia esa URL.
+     Ejemplo: https://raw.githubusercontent.com/tuUsuario/tuRepo/main/phrasal_verbs.js
+  4) En AnkiMine: Opc. de diccionarios -> Diccionario del usuario -> pega la URL en "Script".
+  5) Cargar Scripts -> marca la casilla On/Off -> Guardar+Cerrar.
+
+  Si quieres, puedo proporcionarte un `README.md` listo para poner en el repo y el contenido exacto
+  para que pegues directamente. También puedo convertir el archivo a JSON/CSV si lo prefieres.
+*/
